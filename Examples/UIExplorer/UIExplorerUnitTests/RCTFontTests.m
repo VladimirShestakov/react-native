@@ -16,6 +16,8 @@
 
 #import "RCTFont.h"
 
+#import <CoreText/CoreText.h>
+
 @interface RCTFontTests : XCTestCase
 
 @end
@@ -61,11 +63,13 @@
 
 - (void)testFamily
 {
+#if !TARGET_OS_TV
   {
     UIFont *expected = [UIFont fontWithName:@"Cochin" size:14];
     UIFont *result = [RCTConvert UIFont:@{@"fontFamily": @"Cochin"}];
     RCTAssertEqualFonts(expected, result);
   }
+#endif
   {
     UIFont *expected = [UIFont fontWithName:@"HelveticaNeue" size:14];
     UIFont *result = [RCTConvert UIFont:@{@"fontFamily": @"Helvetica Neue"}];
@@ -133,6 +137,7 @@
     UIFont *result = [RCTConvert UIFont:@{@"fontFamily": @"HelveticaNeue-Bold", @"fontWeight": @"normal"}];
     RCTAssertEqualFonts(expected, result);
   }
+#if !TARGET_OS_TV
   {
     UIFont *expected = [UIFont fontWithName:@"Cochin-Bold" size:14];
     UIFont *result = [RCTConvert UIFont:@{@"fontFamily": @"Cochin", @"fontWeight": @"700"}];
@@ -143,6 +148,7 @@
     UIFont *result = [RCTConvert UIFont:@{@"fontFamily": @"Cochin", @"fontWeight": @"100"}];
     RCTAssertEqualFonts(expected, result);
   }
+#endif
 }
 
 - (void)testFamilyAndStyle
@@ -174,6 +180,27 @@
   {
     UIFont *expected = [UIFont fontWithName:@"HelveticaNeue" size:14];
     UIFont *result = [RCTConvert UIFont:@{@"fontFamily": @"HelveticaNeue-Italic", @"fontStyle": @"normal", @"fontWeight": @"normal"}];
+    RCTAssertEqualFonts(expected, result);
+  }
+}
+
+- (void)testVariant
+{
+  {
+    UIFont *expected = [UIFont monospacedDigitSystemFontOfSize:14 weight:UIFontWeightRegular];
+    UIFont *result = [RCTConvert UIFont:@{@"fontVariant": @[@"tabular-nums"]}];
+    RCTAssertEqualFonts(expected, result);
+  }
+  {
+    UIFont *monospaceFont = [UIFont monospacedDigitSystemFontOfSize:14 weight:UIFontWeightRegular];
+    UIFontDescriptor *fontDescriptor = [monospaceFont.fontDescriptor fontDescriptorByAddingAttributes:@{
+      UIFontDescriptorFeatureSettingsAttribute: @[@{
+        UIFontFeatureTypeIdentifierKey: @(kLowerCaseType),
+        UIFontFeatureSelectorIdentifierKey: @(kLowerCaseSmallCapsSelector),
+      }]
+    }];
+    UIFont *expected = [UIFont fontWithDescriptor:fontDescriptor size:14];
+    UIFont *result = [RCTConvert UIFont:@{@"fontVariant": @[@"tabular-nums", @"small-caps"]}];
     RCTAssertEqualFonts(expected, result);
   }
 }

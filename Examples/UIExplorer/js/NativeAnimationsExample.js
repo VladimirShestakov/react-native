@@ -41,9 +41,12 @@ class Tester extends React.Component {
   current = 0;
 
   onPress = () => {
+    const animConfig = (
+      this.current && this.props.reverseConfig ? this.props.reverseConfig : this.props.config
+    );
     this.current = this.current ? 0 : 1;
     const config = {
-      ...this.props.config,
+      ...animConfig,
       toValue: this.current,
     };
 
@@ -119,6 +122,92 @@ class ValueListenerExample extends React.Component {
   }
 }
 
+const UIExplorerSettingSwitchRow = require('UIExplorerSettingSwitchRow');
+class InternalSettings extends React.Component {
+  _stallInterval: ?number;
+  state: {busyTime: number | string, filteredStall: number};
+  render() {
+    return (
+      <View>
+        <UIExplorerSettingSwitchRow
+          initialValue={false}
+          label="Force JS Stalls"
+          onEnable={() => {
+            this._stallInterval = setInterval(() => {
+              const start = Date.now();
+              console.warn('burn CPU');
+              while ((Date.now() - start) < 100) {}
+            }, 300);
+          }}
+          onDisable={() => {
+            clearInterval(this._stallInterval || 0);
+          }}
+        />
+        <UIExplorerSettingSwitchRow
+          initialValue={false}
+          label="Track JS Stalls"
+          onEnable={() => {
+            require('JSEventLoopWatchdog').install({thresholdMS: 25});
+            this.setState({busyTime: '<none>'});
+            require('JSEventLoopWatchdog').addHandler({
+              onStall: ({busyTime}) => this.setState((state) => ({
+                busyTime,
+                filteredStall: (state.filteredStall || 0) * 0.97 + busyTime * 0.03,
+              })),
+            });
+          }}
+          onDisable={() => {
+            console.warn('Cannot disable yet....');
+          }}
+        />
+        {this.state && <Text>
+          JS Stall filtered: {Math.round(this.state.filteredStall)}, last: {this.state.busyTime}
+        </Text>}
+      </View>
+    );
+  }
+}
+
+class EventExample extends React.Component {
+  state = {
+    scrollX: new Animated.Value(0),
+  };
+
+  render() {
+    const opacity = this.state.scrollX.interpolate({
+      inputRange: [0, 200],
+      outputRange: [1, 0],
+    });
+    return (
+      <View>
+        <Animated.View
+          style={[
+            styles.block,
+            {
+              opacity,
+            }
+          ]}
+        />
+        <Animated.ScrollView
+          horizontal
+          style={{ height: 100, marginTop: 16 }}
+          onScroll={
+            Animated.event([{
+              nativeEvent: { contentOffset: { x: this.state.scrollX } }
+            }], {
+              useNativeDriver: true,
+            })
+          }
+        >
+          <View style={{ width: 600, backgroundColor: '#eee', justifyContent: 'center' }}>
+            <Text>Scroll me!</Text>
+          </View>
+        </Animated.ScrollView>
+      </View>
+    );
+  }
+}
+
 const styles = StyleSheet.create({
   row: {
     padding: 10,
@@ -143,8 +232,7 @@ exports.examples = [
       return (
           <Tester
             type="timing"
-            config={{ duration: 1000 }}
-          >
+            config={{ duration: 1000 }}>
             {anim => (
               <Animated.View
                 style={[
@@ -194,8 +282,7 @@ exports.examples = [
       return (
           <Tester
             type="timing"
-            config={{ duration: 1000 }}
-          >
+            config={{ duration: 1000 }}>
             {anim => (
               <Animated.View
                 style={[
@@ -239,8 +326,7 @@ exports.examples = [
       return (
         <Tester
           type="timing"
-          config={{ duration: 1000 }}
-        >
+          config={{ duration: 1000 }}>
           {anim => (
             <Animated.View
               style={[
@@ -269,8 +355,7 @@ exports.examples = [
       return (
         <Tester
           type="timing"
-          config={{ duration: 1000 }}
-        >
+          config={{ duration: 1000 }}>
           {anim => (
             <Animated.View
               style={[
@@ -292,8 +377,7 @@ exports.examples = [
       return (
         <Tester
           type="timing"
-          config={{ duration: 1000 }}
-        >
+          config={{ duration: 1000 }}>
           {anim => (
             <Animated.View
               style={[
@@ -322,8 +406,7 @@ exports.examples = [
       return (
         <Tester
           type="spring"
-          config={{ bounciness: 0 }}
-        >
+          config={{ bounciness: 0 }}>
           {anim => (
             <Animated.View
               style={[
@@ -335,7 +418,32 @@ exports.examples = [
                         inputRange: [0, 1],
                         outputRange: [0, 100],
                       })
-                    }
+                    },
+                  ],
+                }
+              ]}
+            />
+          )}
+        </Tester>
+      );
+    },
+  },{
+    title: 'translateX => Animated.decay',
+    render: function() {
+      return (
+        <Tester
+          type="decay"
+          config={{ velocity: 0.5 }}
+          reverseConfig={{ velocity: -0.5 }}>
+          {anim => (
+            <Animated.View
+              style={[
+                styles.block,
+                {
+                  transform: [
+                    {
+                      translateX: anim
+                    },
                   ],
                 }
               ]}
@@ -347,10 +455,26 @@ exports.examples = [
   },
   {
     title: 'Animated value listener',
-    platform: 'android',
     render: function() {
       return (
         <ValueListenerExample />
+      );
+    },
+  },
+  {
+    title: 'Internal Settings',
+    render: function() {
+      return (
+        <InternalSettings />
+      );
+    },
+  },
+  {
+    title: 'Animated events',
+    platform: 'android',
+    render: function() {
+      return (
+        <EventExample />
       );
     },
   },
